@@ -1,0 +1,36 @@
+{
+  "routes": [
+    {
+      "version": "1.0",
+      "url": {
+        "prefix": "list/{urlName}",
+        "parameters": {
+          "schema": {
+            "repository": "url-parameters.schema"
+          }
+        }
+      },
+      "name": "test",
+      "description": "A test route",
+      "dispatcher": {
+        "class": "Dispatcher"
+      },
+      "request": {
+        "method": "get",
+        "headers": {
+          "schema": {
+            "repository": "header-parameters.schema"
+          }
+        },
+        "parameters": {
+          "schema": {
+            "repository": "request-parameters.schema"
+          }
+        }
+      },
+      "response": {
+        "contentType": "application/json"
+      }
+    }
+  ]
+}

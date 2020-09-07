@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "properties":{
+    "age": {
+      "type": "integer",
+      "description": "Age of the user",
+      "minimum": 3
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the student",
+      "minLength": 5,
+      "LDL": {
+        "converter": {
+          "class": "NameTransformer"
+        }
+      }
+    }
+  },
+  "required": ["name", "age"]
+}

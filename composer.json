@@ -1,0 +1,27 @@
+{
+    "name": "ldl-framework/http-router-schema",
+    "description": "LDL HTTP Router / Route JSON Schema Validator Plugin",
+    "type": "library",
+    "require": {
+        "ldl-framework/http-core": "dev-master",
+        "ldl-framework/http-router": "dev-master",
+        "swaggest/json-schema": "^0.12.29",
+        "ext-json": "*"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Federico Stange",
+            "email": "jpfstange@gmail.com"
+        },
+        {
+            "name": "Gonzalo Coda",
+            "email": "gonzalocoda@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "LDL\\Http\\Router\\Plugin\\LDL\\Schema\\": "src/LDL/Http/Router/Plugin/LDL/Schema"
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties":{
+    "urlName": {
+      "type": "string",
+      "description": "Name of the student",
+      "minLength": 5
+    }
+  },
+  "required": ["urlName"]
+}
