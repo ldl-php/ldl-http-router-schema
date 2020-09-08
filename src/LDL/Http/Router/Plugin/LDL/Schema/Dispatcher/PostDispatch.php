@@ -5,11 +5,11 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Dispatcher;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\RouteSchemaConfig;
-use LDL\Http\Router\Plugin\LDL\Schema\Validator\RequestSchemaValidator;
-use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
+use LDL\Http\Router\Plugin\LDL\Schema\Validator\ResponseSchemaValidator;
+use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
 use LDL\Http\Router\Route\Route;
 
-class PreDispatch implements MiddlewareInterface
+class PostDispatch implements PostDispatchMiddlewareInterface
 {
     private const NAMESPACE = 'LDLPlugin';
     private const NAME = 'SchemaValidator';
@@ -64,15 +64,12 @@ class PreDispatch implements MiddlewareInterface
         Route $route,
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArguments = []
+        array $prevResults = []
     ) :?string
     {
-        $validator = new RequestSchemaValidator(
-            $route,
+        $validator = new ResponseSchemaValidator(
             $this->config,
-            $request,
             $response,
-            $urlArguments
         );
 
         $validator->validate();

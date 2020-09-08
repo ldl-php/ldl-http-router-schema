@@ -29,7 +29,20 @@
         }
       },
       "response": {
-        "contentType": "application/json"
+        "headers": {
+          "200": {
+            "schema": {
+              "repository": "response-success.schema"
+            }
+          }
+        },
+        "content": {
+          "200": {
+            "schema": {
+              "repository": "response-success-content.schema"
+            }
+          }
+        }
       }
     }
   ]

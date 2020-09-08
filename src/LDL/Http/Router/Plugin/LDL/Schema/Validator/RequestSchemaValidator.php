@@ -5,12 +5,11 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Validator;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\RouteSchemaConfig;
-use LDL\Http\Router\Plugin\LDL\Schema\Parameter\Exception\InvalidParameterException;
 use LDL\Http\Router\Route\Route;
 use Phroute\Phroute\RouteParser;
 use Swaggest\JsonSchema\Context;
 
-class RequestResponseSchemaValidator
+class RequestSchemaValidator
 {
     /**
      * @var Route
@@ -108,7 +107,7 @@ class RequestResponseSchemaValidator
             return;
         }
 
-        $content = $this->response->getContent() ?: '[]';
+        $content = $this->request->getContent() ?: '[]';
 
         try{
             $content = json_decode($content,false,null,\JSON_THROW_ON_ERROR);
@@ -166,7 +165,7 @@ class RequestResponseSchemaValidator
 
     private function parseRequestHeaderSchema() : void
     {
-        $schema = $this->config->getHeaderSchema();
+        $schema = $this->config->getRequestHeaderSchema();
 
         if(!$schema) {
             return;
@@ -191,6 +190,5 @@ class RequestResponseSchemaValidator
             $this->response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
         }
     }
-
     //</editor-fold>
 }

@@ -1,2 +1,2 @@
-# ldl-http-router-cache
-Plugin which adds cache capabilities to ldl-http-router
+# ldl-http-router-schema
+Plugin which adds schema support to ldl-http-router
