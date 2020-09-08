@@ -23,7 +23,7 @@ class Dispatcher implements RouteDispatcherInterface
     )
     {
         return [
-            'test'
+            $request->get('name')
         ];
     }
 }
@@ -33,6 +33,8 @@ $schemaRepo = new SchemaRepository();
 $schemaRepo->append(__DIR__.'/schema/header-schema.json', 'header-parameters.schema');
 $schemaRepo->append(__DIR__.'/schema/parameter-schema.json', 'request-parameters.schema');
 $schemaRepo->append(__DIR__.'/schema/url-parameters-schema.json', 'url-parameters.schema');
+$schemaRepo->append(__DIR__.'/schema/response-success-header-schema.json', 'response-success.schema');
+$schemaRepo->append(__DIR__.'/schema/response-success-content-schema.json', 'response-success-content.schema');
 
 $parserCollection = new RouteConfigParserCollection();
 $parserCollection->append(new RouteSchemaConfigParser($schemaRepo));

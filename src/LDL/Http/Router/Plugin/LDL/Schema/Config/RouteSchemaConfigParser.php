@@ -2,7 +2,13 @@
 
 namespace LDL\Http\Router\Plugin\LDL\Schema\Config;
 
+use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PostDispatch;
 use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PreDispatch;
+use LDL\Http\Router\Plugin\LDL\Schema\Model\SchemaResponseCollection;
+use LDL\Http\Router\Plugin\LDL\Schema\Model\SchemaResponseCollectionInterface;
+use LDL\Http\Router\Plugin\LDL\Schema\Model\SchemaResponseModel;
+use LDL\Http\Router\Plugin\LDL\Schema\Model\SchemaResponseModelInterface;
+use LDL\Http\Router\Plugin\LDL\Schema\Repository\SchemaRepository;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Plugin\LDL\Schema\Repository\SchemaRepositoryInterface;
@@ -57,24 +63,31 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
         $this->route = $route;
         $this->file = $file;
 
+        $routeSchemaConfig = new RouteSchemaConfig(
+            $this->getParameters(),
+            $this->getUrlParameters(),
+            $this->getRequestHeadersSchema(),
+            $this->getBodySchema(),
+            $this->getResponseSchemaHeader(),
+            $this->getResponseSchemaContent()
+        );
+
         /**
          * Append the pre dispatcher middleware to the route
          */
         $route->getConfig()->getPreDispatchMiddleware()->append(
-            new PreDispatch(
-                true,
-                1,
-                new RouteSchemaConfig(
-                    $this->getParameters(),
-                    $this->getUrlParameters(),
-                    $this->getHeadersSchema(),
-                    $this->getBodySchema()
-                )
-            )
+            new PreDispatch(true,1, $routeSchemaConfig)
+        );
+
+        /**
+         * Append the post dispatcher middleware to the route
+         */
+        $route->getConfig()->getPostDispatchMiddleware()->append(
+            new PostDispatch(true, 1, $routeSchemaConfig)
         );
     }
 
-    private function getHeadersSchema() : ?SchemaContract
+    private function getRequestHeadersSchema() : ?SchemaContract
     {
         if (false === array_key_exists('headers', $this->data['request'])) {
             return null;
@@ -86,7 +99,7 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
 
         return $this->getSchema(
             $this->data['request']['headers']['schema'],
-            'headers'
+            'request headers'
         );
     }
 
@@ -133,6 +146,42 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
         }
 
         return $this->getSchema($this->data['request']['body']['schema'], 'body');
+    }
+
+    private function getResponseSchemaHeader(): ? SchemaResponseCollectionInterface
+    {
+        if (false === array_key_exists('headers', $this->data['response'])) {
+            return null;
+        }
+
+        $schemaResponseCollection = new SchemaResponseCollection();
+
+        foreach($this->data['response']['headers'] as $code => $config){
+            $schemaResponseCollection->append(SchemaResponseModel::fromArray([
+                'code' => (int) $code,
+                'schema' => $this->getSchema($config['schema'],'response headers')
+            ]));
+        }
+
+        return $schemaResponseCollection;
+    }
+
+    private function getResponseSchemaContent(): ? SchemaResponseCollectionInterface
+    {
+        if (false === array_key_exists('content', $this->data['response'])) {
+            return null;
+        }
+
+        $schemaResponseCollection = new SchemaResponseCollection();
+
+        foreach($this->data['response']['content'] as $code => $config){
+            $schemaResponseCollection->append(SchemaResponseModel::fromArray([
+                'code' => (int) $code,
+                'schema' => $this->getSchema($config['schema'],'response content')
+            ]));
+        }
+
+        return $schemaResponseCollection;
     }
 
     private function getSchema(
