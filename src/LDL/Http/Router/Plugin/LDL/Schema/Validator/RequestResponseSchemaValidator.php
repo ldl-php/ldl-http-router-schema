@@ -108,10 +108,10 @@ class RequestResponseSchemaValidator
             return;
         }
 
-        $content = $this->response->getContent() ?: '[]';
+        $content = $this->request->getContent() ?: '[]';
 
         try{
-            $content = json_decode($content,false,null,\JSON_THROW_ON_ERROR);
+            $content = json_decode($content,false,2048,\JSON_THROW_ON_ERROR);
 
             $context = new Context();
             $context->tolerateStrings = true;

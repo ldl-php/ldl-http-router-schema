@@ -13,6 +13,8 @@ class PreDispatch implements MiddlewareInterface
 {
     private const NAMESPACE = 'LDLPlugin';
     private const NAME = 'SchemaValidator';
+    private const DEFAULT_IS_ACTIVE = true;
+    private const DEFAULT_PRIORITY = 1;
 
     /**
      * @var bool
@@ -30,13 +32,13 @@ class PreDispatch implements MiddlewareInterface
     private $config;
 
     public function __construct(
-        bool $isActive,
-        int $priority,
-        RouteSchemaConfig $config
+        RouteSchemaConfig $config,
+        bool $isActive = null,
+        int $priority = null
     )
     {
-        $this->isActive = $isActive;
-        $this->priority = $priority;
+        $this->isActive = $isActive ?? self::DEFAULT_IS_ACTIVE;
+        $this->priority = $priority ?? self::DEFAULT_PRIORITY;
         $this->config = $config;
     }
 

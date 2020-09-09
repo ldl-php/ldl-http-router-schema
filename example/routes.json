@@ -17,6 +17,8 @@
       },
       "request": {
         "method": "get",
+        "active": true,
+        "priority": 1,
         "headers": {
           "schema": {
             "repository": "header-parameters.schema"
@@ -26,14 +28,25 @@
           "schema": {
             "repository": "request-parameters.schema"
           }
+        },
+        "body": {
+
         }
       },
       "response": {
-        "contentType": "application/json",
+        "active": true,
+        "priority": 1,
         "headers": {
           "schema": {
             "200": {
-              "repository": "header-parameters.schema"
+              "repository": "response-header-parameters.schema"
+            }
+          }
+        },
+        "content": {
+          "schema": {
+            "200": {
+              "repository": "response-content-parameters.schema"
             }
           }
         }

@@ -4,6 +4,7 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Config;
 
 use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PostDispatch;
 use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PreDispatch;
+use LDL\Http\Router\Plugin\LDL\Schema\Helper\SchemaParserHelper;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Plugin\LDL\Schema\Repository\SchemaRepositoryInterface;
@@ -14,6 +15,17 @@ use Swaggest\JsonSchema\SchemaContract;
 
 class RouteSchemaConfigParser implements RouteConfigParserInterface
 {
+    private const SCHEMA_REQUEST = 'request';
+    private const SCHEMA_RESPONSE = 'response';
+    private const SCHEMA_SCHEMA = 'schema';
+    private const SCHEMA_PARAMETERS = 'parameters';
+    private const SCHEMA_URL = 'url';
+    private const SCHEMA_HEADERS = 'headers';
+    private const SCHEMA_CONTENT = 'content';
+    private const SCHEMA_BODY = 'body';
+    private const SCHEMA_ACTIVE = 'active';
+    private const SCHEMA_PRIORITY = 'priority';
+
     /**
      * @var array
      */
@@ -63,21 +75,21 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
          */
         $route->getConfig()->getPreDispatchMiddleware()->append(
             new PreDispatch(
-                true,
-                1,
                 new RouteSchemaConfig(
                     $this->getParameters(),
                     $this->getUrlParameters(),
                     $this->getHeadersSchema(),
                     $this->getBodySchema()
-                )
+                ),
+                $this->getRequestActive(),
+                $this->getRequestPriority()
             )
         );
 
         $route->getConfig()->getPostDispatchMiddleware()->append(
             new PostDispatch(
-                true,
-                1,
+                $this->getResponseActive(),
+                $this->getResponsePriority(),
                 $this->getResponseHeaderSchema(),
                 $this->getResponseContentSchema()
             )
@@ -87,67 +99,71 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
 
     private function getHeadersSchema() : ?SchemaContract
     {
-        if (false === array_key_exists('headers', $this->data['request'])) {
-            return null;
-        }
+        $keys = [
+            self::SCHEMA_REQUEST,
+            self::SCHEMA_HEADERS,
+            self::SCHEMA_SCHEMA
+        ];
 
-        if (false === array_key_exists('schema', $this->data['request']['headers'])) {
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
             return null;
         }
 
         return $this->getSchema(
-            $this->data['request']['headers']['schema'],
-            'headers'
+            $this->data[self::SCHEMA_REQUEST][self::SCHEMA_HEADERS][self::SCHEMA_SCHEMA],
+            self::SCHEMA_HEADERS
         );
     }
 
     private function getUrlParameters(): ?SchemaContract
     {
-        if (false === array_key_exists('parameters', $this->data['url'])) {
-            return null;
-        }
+        $keys = [
+            self::SCHEMA_URL,
+            self::SCHEMA_PARAMETERS,
+            self::SCHEMA_SCHEMA
+        ];
 
-        if (false === array_key_exists('schema', $this->data['url']['parameters'])) {
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
             return null;
         }
 
         return $this->getSchema(
-            $this->data['url']['parameters']['schema'],
-            'parameters',
+            $this->data[self::SCHEMA_URL][self::SCHEMA_PARAMETERS][self::SCHEMA_SCHEMA],
+            self::SCHEMA_PARAMETERS,
         );
     }
 
     private function getParameters() : ?SchemaContract
     {
-        if (false === array_key_exists('parameters', $this->data['request'])) {
-            return null;
-        }
+        $keys = [
+            self::SCHEMA_REQUEST,
+            self::SCHEMA_PARAMETERS,
+            self::SCHEMA_SCHEMA
+        ];
 
-        if (false === array_key_exists('schema', $this->data['request']['parameters'])) {
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
             return null;
         }
 
         return $this->getSchema(
-            $this->data['request']['parameters']['schema'],
-            'parameters'
+            $this->data[self::SCHEMA_REQUEST][self::SCHEMA_PARAMETERS][self::SCHEMA_SCHEMA],
+            self::SCHEMA_PARAMETERS
         );
     }
 
     private function getResponseContentSchema() : ?ResponseSchemaCollection
     {
-        if(!array_key_exists('response', $this->data)){
+        $keys = [
+            self::SCHEMA_RESPONSE,
+            self::SCHEMA_CONTENT,
+            self::SCHEMA_SCHEMA
+        ];
+
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
             return null;
         }
 
-        if(!array_key_exists('content', $this->data['response'])){
-            return null;
-        }
-
-        if(!array_key_exists('schema', $this->data['response']['content'])){
-            return null;
-        }
-
-        $schema = $this->data['response']['content']['schema'];
+        $schema = $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_CONTENT][self::SCHEMA_SCHEMA];
 
         if(!is_array($schema)) {
             $msg = 'Response content schema must be an array';
@@ -168,22 +184,20 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
 
     private function getResponseHeaderSchema() : ?ResponseSchemaCollection
     {
-        if(!array_key_exists('response', $this->data)){
+        $keys = [
+            self::SCHEMA_RESPONSE,
+            self::SCHEMA_HEADERS,
+            self::SCHEMA_SCHEMA
+        ];
+
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
             return null;
         }
 
-        if(!array_key_exists('header', $this->data['response'])){
-            return null;
-        }
-
-        if(!array_key_exists('schema', $this->data['response']['header'])){
-            return null;
-        }
-
-        $schema = $this->data['response']['header']['schema'];
+        $schema = $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_HEADERS][self::SCHEMA_SCHEMA];
 
         if(!is_array($schema)) {
-            $msg = 'Response header schema must be an array';
+            $msg = 'Response headers schema must be an array';
             throw new Exception\SchemaSectionError($this->exceptionMessage([$msg]));
         }
 
@@ -191,7 +205,7 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
 
         foreach($schema as $httpStatusCode => $value){
             $responseSchema->append(
-                $this->getSchema($value, 'response header schema'),
+                $this->getSchema($value, 'response headers schema'),
                 $httpStatusCode
             );
         }
@@ -201,15 +215,76 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
 
     private function getBodySchema(): ?SchemaContract
     {
-        if (!array_key_exists('body', $this->data['request'])) {
+        $keys = [
+            self::SCHEMA_REQUEST,
+            self::SCHEMA_BODY,
+            self::SCHEMA_SCHEMA
+        ];
+
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
             return null;
         }
 
-        if (!array_key_exists('schema', $this->data['request']['body'])) {
+        return $this->getSchema(
+            $this->data[self::SCHEMA_REQUEST][self::SCHEMA_BODY][self::SCHEMA_SCHEMA],
+            self::SCHEMA_BODY
+        );
+    }
+
+    private function getRequestActive() : ?bool
+    {
+        $keys = [
+            self::SCHEMA_REQUEST,
+            self::SCHEMA_ACTIVE
+        ];
+
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
             return null;
         }
 
-        return $this->getSchema($this->data['request']['body']['schema'], 'body');
+        return (bool) $this->data[self::SCHEMA_REQUEST][self::SCHEMA_ACTIVE];
+    }
+
+    private function getRequestPriority() : ?int
+    {
+        $keys = [
+            self::SCHEMA_REQUEST,
+            self::SCHEMA_PRIORITY
+        ];
+
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+            return null;
+        }
+
+        return (int) $this->data[self::SCHEMA_REQUEST][self::SCHEMA_PRIORITY];
+    }
+
+    private function getResponseActive() : ?bool
+    {
+        $keys = [
+            self::SCHEMA_RESPONSE,
+            self::SCHEMA_ACTIVE
+        ];
+
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+            return null;
+        }
+
+        return (bool) $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_ACTIVE];
+    }
+
+    private function getResponsePriority() : ?int
+    {
+        $keys = [
+            self::SCHEMA_RESPONSE,
+            self::SCHEMA_PRIORITY
+        ];
+
+        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+            return null;
+        }
+
+        return (int) $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_PRIORITY];
     }
 
     private function getSchema(
@@ -226,7 +301,7 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
 
         switch ($type) {
             case 'repository':
-                if (null === $this->schemaRepo) {
+                if (false === $this->schemaRepo->offsetExists($schema['repository'])) {
                     $msg = "Schema repository specified but no repository was given, in section: $section";
                     throw new Exception\SchemaSectionError($this->exceptionMessage([$msg]));
                 }
