@@ -2,6 +2,7 @@
 
 namespace LDL\Http\Router\Plugin\LDL\Schema\Config;
 
+use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PostDispatch;
 use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PreDispatch;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Route;
@@ -72,6 +73,16 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
                 )
             )
         );
+
+        $route->getConfig()->getPostDispatchMiddleware()->append(
+            new PostDispatch(
+                true,
+                1,
+                $this->getResponseHeaderSchema(),
+                $this->getResponseContentSchema()
+            )
+        );
+
     }
 
     private function getHeadersSchema() : ?SchemaContract
@@ -120,6 +131,72 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
             $this->data['request']['parameters']['schema'],
             'parameters'
         );
+    }
+
+    private function getResponseContentSchema() : ?ResponseSchemaCollection
+    {
+        if(!array_key_exists('response', $this->data)){
+            return null;
+        }
+
+        if(!array_key_exists('content', $this->data['response'])){
+            return null;
+        }
+
+        if(!array_key_exists('schema', $this->data['response']['content'])){
+            return null;
+        }
+
+        $schema = $this->data['response']['content']['schema'];
+
+        if(!is_array($schema)) {
+            $msg = 'Response content schema must be an array';
+            throw new Exception\SchemaSectionError($this->exceptionMessage([$msg]));
+        }
+
+        $responseSchema = new ResponseSchemaCollection();
+
+        foreach($schema as $httpStatusCode => $value){
+            $responseSchema->append(
+                $this->getSchema($value, 'response content schema'),
+                $httpStatusCode
+            );
+        }
+
+        return count($responseSchema) > 0 ? $responseSchema : null;
+    }
+
+    private function getResponseHeaderSchema() : ?ResponseSchemaCollection
+    {
+        if(!array_key_exists('response', $this->data)){
+            return null;
+        }
+
+        if(!array_key_exists('header', $this->data['response'])){
+            return null;
+        }
+
+        if(!array_key_exists('schema', $this->data['response']['header'])){
+            return null;
+        }
+
+        $schema = $this->data['response']['header']['schema'];
+
+        if(!is_array($schema)) {
+            $msg = 'Response header schema must be an array';
+            throw new Exception\SchemaSectionError($this->exceptionMessage([$msg]));
+        }
+
+        $responseSchema = new ResponseSchemaCollection();
+
+        foreach($schema as $httpStatusCode => $value){
+            $responseSchema->append(
+                $this->getSchema($value, 'response header schema'),
+                $httpStatusCode
+            );
+        }
+
+        return count($responseSchema) > 0 ? $responseSchema : null;
     }
 
     private function getBodySchema(): ?SchemaContract

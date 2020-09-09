@@ -2,18 +2,17 @@
 
 namespace LDL\Http\Router\Plugin\LDL\Schema\Config;
 
-use LDL\Http\Router\Plugin\LDL\Schema\Parameter\ParameterCollection;
 use Swaggest\JsonSchema\SchemaContract;
 
 class RouteSchemaConfig
 {
     /**
-     * @var ParameterCollection
+     * @var SchemaContract
      */
     private $requestParameters;
 
     /**
-     * @var ParameterCollection
+     * @var SchemaContract
      */
     private $urlParameters;
 

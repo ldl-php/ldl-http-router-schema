@@ -29,7 +29,14 @@
         }
       },
       "response": {
-        "contentType": "application/json"
+        "contentType": "application/json",
+        "headers": {
+          "schema": {
+            "200": {
+              "repository": "header-parameters.schema"
+            }
+          }
+        }
       }
     }
   ]

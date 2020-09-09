@@ -4,6 +4,7 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Repository;
 
 use LDL\Type\Collection\AbstractCollection;
 use LDL\Type\Collection\Interfaces;
+use LDL\Type\Exception\TypeMismatchException;
 
 class SchemaRepository extends AbstractCollection implements SchemaRepositoryInterface
 {
@@ -29,16 +30,6 @@ class SchemaRepository extends AbstractCollection implements SchemaRepositoryInt
             throw new Exception\SchemaNotFoundException($msg);
         }
 
-        if(!file_exists($file)){
-            $msg = "Schema file \"$file\" not found!";
-            throw new Exception\SchemaNotFoundException($msg);
-        }
-
-        if(!is_readable($file)){
-            $msg = "Could not read schema file: \"$file\", permission denied";
-            throw new Exception\SchemaUnreadableException($msg);
-        }
-
         $data = file_get_contents($file);
 
         try {
@@ -62,8 +53,24 @@ class SchemaRepository extends AbstractCollection implements SchemaRepositoryInt
      *
      * @throws \Exception
      */
-    public function validateItem($item): void
+    public function validateItem($file): void
     {
+        if(!is_string($file)){
+            $msg = sprintf(
+                'Item must be a string, "%s" was given',
+                gettype($file)
+            );
+            throw new TypeMismatchException($msg);
+        }
 
+        if(!file_exists($file)){
+            $msg = "Schema file \"$file\" not found!";
+            throw new Exception\SchemaNotFoundException($msg);
+        }
+
+        if(!is_readable($file)){
+            $msg = "Could not read schema file: \"$file\", permission denied";
+            throw new Exception\SchemaUnreadableException($msg);
+        }
     }
 }
