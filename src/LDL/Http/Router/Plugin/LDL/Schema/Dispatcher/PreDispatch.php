@@ -4,12 +4,12 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Dispatcher;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Middleware\PreDispatchMiddlewareInterface;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\RouteSchemaConfig;
 use LDL\Http\Router\Plugin\LDL\Schema\Validator\RequestResponseSchemaValidator;
-use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
 use LDL\Http\Router\Route\Route;
 
-class PreDispatch implements MiddlewareInterface
+class PreDispatch implements PreDispatchMiddlewareInterface
 {
     private const NAMESPACE = 'LDLPlugin';
     private const NAME = 'SchemaValidator';

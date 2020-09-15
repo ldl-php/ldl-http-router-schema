@@ -1,7 +1,7 @@
 {
   "description": "Content Description",
-  "type": "object",
-  "properties": {
+  "type": "array",
+  "items": {
     "main": {
       "type": "object",
       "properties": {

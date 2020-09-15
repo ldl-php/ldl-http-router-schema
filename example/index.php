@@ -43,9 +43,17 @@ $schemaRepo->append(__DIR__.'/schema/url-parameters-schema.json', 'url-parameter
 $parserCollection = new RouteConfigParserCollection();
 $parserCollection->append(new RouteSchemaConfigParser($schemaRepo));
 
+$response = new Response();
+
+$router = new Router(
+    Request::createFromGlobals(),
+    $response
+);
+
 try{
     $routes = RouteFactory::fromJsonFile(
         __DIR__.'/routes.json',
+        $router,
         null,
         $parserCollection
     );
@@ -54,12 +62,6 @@ try{
 }
 
 $group = new RouteGroup('student', 'student', $routes);
-$response = new Response();
-
-$router = new Router(
-    Request::createFromGlobals(),
-    $response
-);
 
 $router->addGroup($group);
 

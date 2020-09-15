@@ -4,8 +4,8 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Dispatcher;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Middleware\PostDispatchMiddlewareInterface;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\ResponseSchemaCollection;
-use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
 use LDL\Http\Router\Route\Route;
 use Swaggest\JsonSchema\Context;
 use Swaggest\JsonSchema\SchemaContract;
