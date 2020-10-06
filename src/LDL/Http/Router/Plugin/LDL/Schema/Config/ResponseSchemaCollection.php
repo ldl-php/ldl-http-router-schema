@@ -2,27 +2,22 @@
 
 namespace LDL\Http\Router\Plugin\LDL\Schema\Config;
 
+use LDL\Type\Collection\Interfaces\Namespaceable\NamespaceableInterface;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
-use LDL\Type\Exception\TypeMismatchException;
+use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
+use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use Swaggest\JsonSchema\SchemaContract;
 
-class ResponseSchemaCollection extends ObjectCollection
+class ResponseSchemaCollection extends ObjectCollection implements NamespaceableInterface
 {
+    use NamespaceableTrait;
 
-    public function validateItem($item) : void
+    public function __construct(iterable $items = null)
     {
-        parent::validateItem($item);
+        parent::__construct($items);
 
-        if($item instanceof SchemaContract){
-            return;
-        }
-
-        $msg = sprintf(
-            'Item must be an instance of "%s", "%s" was given',
-            SchemaContract::class,
-            get_class($item)
-        );
-
-        throw new TypeMismatchException($msg);
+        $this->getValidatorChain()
+            ->append(new InterfaceComplianceItemValidator(SchemaContract::class))
+            ->lock();
     }
 }

@@ -13,8 +13,9 @@
     },
     "lastName": {
       "type": "string",
-      "description": "Name of the student",
+      "description": "Last name of the student",
       "minLength": 3
     }
-  }
+  },
+  "required": ["age", "name", "lastName"]
 }
