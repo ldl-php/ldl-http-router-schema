@@ -14,13 +14,14 @@ use LDL\Http\Router\Router;
 
 use LDL\Http\Router\Plugin\LDL\Schema\Repository\SchemaRepository;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\RouteSchemaConfigParser;
+use LDL\Type\Collection\Validator\File\Exception\FileValidatorException;
 
 class Dispatcher implements RouteDispatcherInterface
 {
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response
-    )
+    ): ?array
     {
         //return json_decode($request->getContent(), true);
 
@@ -33,12 +34,16 @@ class Dispatcher implements RouteDispatcherInterface
 
 $schemaRepo = new SchemaRepository();
 
-$schemaRepo->append(__DIR__.'/schema/header-schema.json', 'header-parameters.schema');
-$schemaRepo->append(__DIR__.'/schema/response-content-schema.json', 'response-content-parameters.schema');
-$schemaRepo->append(__DIR__.'/schema/response-header-schema.json', 'response-header-parameters.schema');
-$schemaRepo->append(__DIR__.'/schema/parameter-schema.json', 'request-parameters.schema');
-$schemaRepo->append(__DIR__.'/schema/url-parameters-schema.json', 'url-parameters.schema');
-//$schemaRepo->append(__DIR__.'/schema/body-schema.json', 'request-body.schema');
+try{
+    $schemaRepo->append(__DIR__.'/schema/header-schema.json', 'header-parameters.schema');
+    $schemaRepo->append(__DIR__.'/schema/response-content-schema.json', 'response-content-parameters.schema');
+    $schemaRepo->append(__DIR__.'/schema/response-header-schema.json', 'response-header-parameters.schema');
+    $schemaRepo->append(__DIR__.'/schema/parameter-schema.json', 'request-parameters.schema');
+    $schemaRepo->append(__DIR__.'/schema/url-parameters-schema.json', 'url-parameters.schema');
+    //$schemaRepo->append(__DIR__.'/schema/body-schema.json', 'request-body.schema');
+}catch(FileValidatorException $e){
+
+}
 
 $parserCollection = new RouteConfigParserCollection();
 $parserCollection->append(new RouteSchemaConfigParser($schemaRepo));

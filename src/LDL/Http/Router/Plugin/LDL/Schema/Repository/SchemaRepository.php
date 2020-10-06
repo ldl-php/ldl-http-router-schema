@@ -3,22 +3,19 @@
 namespace LDL\Http\Router\Plugin\LDL\Schema\Repository;
 
 use LDL\Type\Collection\AbstractCollection;
-use LDL\Type\Collection\Interfaces;
-use LDL\Type\Exception\TypeMismatchException;
+use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
+use LDL\Type\Collection\Validator\File\ReadableFileValidator;
+use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
 
-class SchemaRepository extends AbstractCollection implements SchemaRepositoryInterface
+class SchemaRepository extends AbstractCollection implements HasValidatorChainInterface, SchemaRepositoryInterface
 {
-    public function append($item, $key = null): Interfaces\CollectionInterface
+    use ValueValidatorChainTrait;
+
+    public function __construct(iterable $items = null)
     {
-        if(null === $key){
-            throw new \InvalidArgumentException("Schema must have a name");
-        }
-
-        if($this->offsetExists($key)){
-            throw new \InvalidArgumentException("Duplicated schema name: \"$key\"");
-        }
-
-        return parent::append($item, $key);
+        parent::__construct($items);
+        $this->getValidatorChain()
+            ->append(new ReadableFileValidator());
     }
 
     public function getSchema(string $name) : array
@@ -43,34 +40,5 @@ class SchemaRepository extends AbstractCollection implements SchemaRepositoryInt
 
         }
 
-    }
-
-    /**
-     * Validate the item to be added to the collection
-     *
-     * @param $item
-     * @return mixed
-     *
-     * @throws \Exception
-     */
-    public function validateItem($file): void
-    {
-        if(!is_string($file)){
-            $msg = sprintf(
-                'Item must be a string, "%s" was given',
-                gettype($file)
-            );
-            throw new TypeMismatchException($msg);
-        }
-
-        if(!file_exists($file)){
-            $msg = "Schema file \"$file\" not found!";
-            throw new Exception\SchemaNotFoundException($msg);
-        }
-
-        if(!is_readable($file)){
-            $msg = "Could not read schema file: \"$file\", permission denied";
-            throw new Exception\SchemaUnreadableException($msg);
-        }
     }
 }

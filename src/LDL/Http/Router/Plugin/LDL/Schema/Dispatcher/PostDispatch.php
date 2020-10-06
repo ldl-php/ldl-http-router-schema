@@ -4,13 +4,13 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Dispatcher;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareInterface;
+use LDL\Http\Router\Middleware\MiddlewareInterface;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\ResponseSchemaCollection;
 use LDL\Http\Router\Route\Route;
 use Swaggest\JsonSchema\Context;
 use Swaggest\JsonSchema\SchemaContract;
 
-class PostDispatch implements PostDispatchMiddlewareInterface
+class PostDispatch implements MiddlewareInterface
 {
     private const NAMESPACE = 'LDLPlugin';
     private const NAME = 'SchemaValidator';
@@ -110,8 +110,6 @@ class PostDispatch implements PostDispatchMiddlewareInterface
         try{
             $context = new Context();
             $context->tolerateStrings = true;
-
-            $data = json_decode(json_encode($data));
 
             $schema->in(
                 $data,

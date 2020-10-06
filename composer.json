@@ -5,6 +5,9 @@
     "require": {
         "ldl-framework/http-core": "dev-master",
         "ldl-framework/http-router": "dev-master",
+        "ldl-framework/ldl-contracts": "dev-master",
+        "ldl-framework/typed-collection": "dev-master",
+        "ldl-framework/framework-base": "dev-master",
         "swaggest/json-schema": "^0.12.29",
         "ext-json": "*"
     },
