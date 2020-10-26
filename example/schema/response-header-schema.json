@@ -1,10 +1,10 @@
 {
   "type": "object",
   "properties": {
-    "content-type": {
+    "cache-control": {
       "type": "string",
-      "pattern": "^application/json$"
+      "pattern": "no-cache, private"
     }
   },
-  "required": ["content-type"]
+  "required": ["cache-control"]
 }

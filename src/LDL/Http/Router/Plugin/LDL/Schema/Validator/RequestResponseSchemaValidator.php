@@ -5,15 +5,15 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Validator;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\RouteSchemaConfig;
-use LDL\Http\Router\Plugin\LDL\Schema\Parameter\Exception\InvalidParameterException;
-use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\RouteInterface;
 use Phroute\Phroute\RouteParser;
 use Swaggest\JsonSchema\Context;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class RequestResponseSchemaValidator
 {
     /**
-     * @var Route
+     * @var RouteInterface
      */
     private $route;
 
@@ -38,23 +38,23 @@ class RequestResponseSchemaValidator
     private $error;
 
     /**
-     * @var array
+     * @var ParameterBag|null
      */
-    private $urlArguments;
+    private $urlParameters;
 
     public function __construct(
-        Route $route,
+        RouteInterface $route,
         RouteSchemaConfig $schemaConfig,
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArguments = []
+        ParameterBag $urlParameters=null
     )
     {
         $this->route = $route;
         $this->config = $schemaConfig;
         $this->request = $request;
         $this->response = $response;
-        $this->urlArguments = $urlArguments;
+        $this->urlParameters = $urlParameters;
     }
 
     public function validate() : void
@@ -128,7 +128,7 @@ class RequestResponseSchemaValidator
 
     private function parseRequestUrlSchema() : void
     {
-        $args = $this->urlArguments;
+        $args = $this->urlParameters->all();
         $schema = $this->config->getUrlParameters();
 
         if(null === $schema){

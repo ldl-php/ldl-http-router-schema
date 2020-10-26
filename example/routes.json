@@ -12,8 +12,25 @@
       },
       "name": "test",
       "description": "A test route",
-      "dispatcher": {
-        "class": "Dispatcher"
+      "middleware": {
+        "preDispatch": {
+          "name": "main pre dispatchers",
+          "list": [
+            "ldl.schema.validator.predispatch"
+          ]
+        },
+        "dispatchers": {
+          "name": "main dispatchers",
+          "list": [
+            "dispatcher"
+          ]
+        },
+        "postDispatch": {
+          "name": "main post dispatchers",
+          "list": [
+            "ldl.schema.validator.postdispatch"
+          ]
+        }
       },
       "request": {
         "method": "get",
@@ -34,18 +51,16 @@
         }
       },
       "response": {
-        "active": true,
-        "priority": 1,
-        "headers": {
-          "schema": {
+        "schema": {
+          "active": true,
+          "priority": 1,
+          "headers": {
             "200": {
               "repository": "response-header-parameters.schema"
             }
-          }
-        },
-        "content": {
-          "schema": {
-            "200": {
+          },
+          "content": {
+            "200-299": {
               "repository": "response-content-parameters.schema"
             }
           }

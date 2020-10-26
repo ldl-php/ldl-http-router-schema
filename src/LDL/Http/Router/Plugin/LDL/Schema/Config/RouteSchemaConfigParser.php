@@ -2,13 +2,15 @@
 
 namespace LDL\Http\Router\Plugin\LDL\Schema\Config;
 
+use LDL\Http\Router\Plugin\LDL\Schema\Config\Exception\Handler\InvalidRequestSchemaExceptionHandler;
+use LDL\Http\Router\Plugin\LDL\Schema\Config\Exception\Handler\InvalidResponseSchemaExceptionHandler;
 use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PostDispatch;
 use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PreDispatch;
 use LDL\Http\Router\Plugin\LDL\Schema\Helper\SchemaParserHelper;
+use LDL\Http\Router\Route\Config\Helper\ResponseCodeHelper;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
-use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\RouteInterface;
 use LDL\Http\Router\Plugin\LDL\Schema\Repository\SchemaRepositoryInterface;
-use Psr\Container\ContainerInterface;
 
 use Swaggest\JsonSchema\Schema;
 use Swaggest\JsonSchema\SchemaContract;
@@ -29,22 +31,12 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
     /**
      * @var array
      */
-    private $data;
-
-    /**
-     * @var Route
-     */
-    private $route;
+    private $config;
 
     /**
      * @var string
      */
     private $file;
-
-    /**
-     * @var ContainerInterface
-     */
-    private $container;
 
     /**
      * @var SchemaRepositoryInterface
@@ -59,42 +51,70 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
     }
 
     public function parse(
-        array $data,
-        Route $route,
-        ContainerInterface $container = null,
-        string $file = null
+        RouteInterface $route
     ): void
     {
-        $this->data = $data;
-        $this->container = $container;
-        $this->route = $route;
-        $this->file = $file;
+        $routePreDispatchers = $route->getPreDispatchChain()->filterByClass(PreDispatch::class);
+        $routePostDispatchers = $route->getPostDispatchChain()->filterByClass(PostDispatch::class);
 
-        /**
-         * Append the pre dispatcher middleware to the route
-         */
-        $route->getConfig()->getPreDispatchMiddleware()->append(
-            new PreDispatch(
-                new RouteSchemaConfig(
-                    $this->getParameters(),
-                    $this->getUrlParameters(),
-                    $this->getHeadersSchema(),
-                    $this->getBodySchema()
-                ),
-                $this->getRequestActive(),
-                $this->getRequestPriority()
-            )
+        $hasPreDispatchers = count($routePreDispatchers) > 0;
+        $hasPostDispatchers = count($routePostDispatchers) > 0;
+
+        $this->config = $route->getConfig()->getRawConfig();
+
+        $route->getExceptionHandlers()->append(new InvalidRequestSchemaExceptionHandler())
+            ->append(new InvalidResponseSchemaExceptionHandler());
+
+        $routeSchemaConfig = new RouteSchemaConfig(
+            $this->getParameters(),
+            $this->getUrlParameters(),
+            $this->getHeadersSchema(),
+            $this->getBodySchema()
         );
 
-        $route->getConfig()->getPostDispatchMiddleware()->append(
-            new PostDispatch(
-                $this->getResponseActive(),
+        if(false === $hasPreDispatchers){
+            $preDispatch = new PreDispatch();
+            $preDispatch->init(
+                $routeSchemaConfig,
+                $this->getRequestActive(),
+                $this->getRequestPriority()
+            );
+
+            $route->getRouter()->getPreDispatchChain()->append($preDispatch);
+        }
+
+        if((false === $hasPostDispatchers) && (bool) $this->getResponseActive()) {
+            $postDispatch = new PostDispatch();
+            $postDispatch->init(
                 $this->getResponsePriority(),
                 $this->getResponseHeaderSchema(),
                 $this->getResponseContentSchema()
-            )
-        );
+            );
 
+            $route->getRouter()->getPostDispatchChain()->append($postDispatch);
+        }
+
+        /**
+         * @var PreDispatch $preDispatch
+         */
+        foreach($routePreDispatchers as $preDispatch){
+            $preDispatch->init(
+                $routeSchemaConfig,
+                $this->getRequestActive(),
+                $this->getRequestPriority()
+            );
+        }
+
+        /**
+         * @var PostDispatch $postDispatch
+         */
+        foreach($routePostDispatchers as $postDispatch){
+            $postDispatch->init(
+                $this->getResponsePriority(),
+                $this->getResponseHeaderSchema(),
+                $this->getResponseContentSchema()
+            );
+        }
     }
 
     private function getHeadersSchema() : ?SchemaContract
@@ -105,12 +125,12 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
             self::SCHEMA_SCHEMA
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
         return $this->getSchema(
-            $this->data[self::SCHEMA_REQUEST][self::SCHEMA_HEADERS][self::SCHEMA_SCHEMA],
+            $this->config[self::SCHEMA_REQUEST][self::SCHEMA_HEADERS][self::SCHEMA_SCHEMA],
             self::SCHEMA_HEADERS
         );
     }
@@ -123,12 +143,12 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
             self::SCHEMA_SCHEMA
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
         return $this->getSchema(
-            $this->data[self::SCHEMA_URL][self::SCHEMA_PARAMETERS][self::SCHEMA_SCHEMA],
+            $this->config[self::SCHEMA_URL][self::SCHEMA_PARAMETERS][self::SCHEMA_SCHEMA],
             self::SCHEMA_PARAMETERS,
         );
     }
@@ -141,12 +161,12 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
             self::SCHEMA_SCHEMA
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
         return $this->getSchema(
-            $this->data[self::SCHEMA_REQUEST][self::SCHEMA_PARAMETERS][self::SCHEMA_SCHEMA],
+            $this->config[self::SCHEMA_REQUEST][self::SCHEMA_PARAMETERS][self::SCHEMA_SCHEMA],
             self::SCHEMA_PARAMETERS
         );
     }
@@ -155,15 +175,15 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
     {
         $keys = [
             self::SCHEMA_RESPONSE,
-            self::SCHEMA_CONTENT,
-            self::SCHEMA_SCHEMA
+            self::SCHEMA_SCHEMA,
+            self::SCHEMA_CONTENT
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
-        $schema = $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_CONTENT][self::SCHEMA_SCHEMA];
+        $schema = $this->config[self::SCHEMA_RESPONSE][self::SCHEMA_SCHEMA][self::SCHEMA_CONTENT];
 
         if(!is_array($schema)) {
             $msg = 'Response content schema must be an array';
@@ -171,12 +191,19 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
         }
 
         $responseSchema = new ResponseSchemaCollection();
+        $section = 'response -> content -> schema';
 
-        foreach($schema as $httpStatusCode => $value){
-            $responseSchema->append(
-                $this->getSchema($value, 'response content schema'),
-                $httpStatusCode
+        foreach($schema as $responseCodes => $value){
+            $schemaContract = $this->getSchema($value, $section);
+
+            $codes = ResponseCodeHelper::generate(
+                (string) $responseCodes,
+                $section
             );
+
+            foreach($codes as $code => $schemaValue){
+                $responseSchema->append($schemaContract, $code);
+            }
         }
 
         return count($responseSchema) > 0 ? $responseSchema : null;
@@ -186,15 +213,15 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
     {
         $keys = [
             self::SCHEMA_RESPONSE,
-            self::SCHEMA_HEADERS,
-            self::SCHEMA_SCHEMA
+            self::SCHEMA_SCHEMA,
+            self::SCHEMA_HEADERS
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
-        $schema = $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_HEADERS][self::SCHEMA_SCHEMA];
+        $schema = $this->config[self::SCHEMA_RESPONSE][self::SCHEMA_SCHEMA][self::SCHEMA_HEADERS];
 
         if(!is_array($schema)) {
             $msg = 'Response headers schema must be an array';
@@ -202,12 +229,19 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
         }
 
         $responseSchema = new ResponseSchemaCollection();
+        $section = 'response -> headers -> schema';
 
-        foreach($schema as $httpStatusCode => $value){
-            $responseSchema->append(
-                $this->getSchema($value, 'response headers schema'),
-                $httpStatusCode
+        foreach($schema as $responseCodes => $value){
+            $schemaContract = $this->getSchema($value, $section);
+
+            $codes = ResponseCodeHelper::generate(
+                (string) $responseCodes,
+                $section
             );
+
+            foreach($codes as $code => $schemaValue){
+                $responseSchema->append($schemaContract, $code);
+            }
         }
 
         return count($responseSchema) > 0 ? $responseSchema : null;
@@ -221,12 +255,12 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
             self::SCHEMA_SCHEMA
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
         return $this->getSchema(
-            $this->data[self::SCHEMA_REQUEST][self::SCHEMA_BODY][self::SCHEMA_SCHEMA],
+            $this->config[self::SCHEMA_REQUEST][self::SCHEMA_BODY][self::SCHEMA_SCHEMA],
             self::SCHEMA_BODY
         );
     }
@@ -238,11 +272,11 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
             self::SCHEMA_ACTIVE
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
-        return (bool) $this->data[self::SCHEMA_REQUEST][self::SCHEMA_ACTIVE];
+        return (bool) $this->config[self::SCHEMA_REQUEST][self::SCHEMA_ACTIVE];
     }
 
     private function getRequestPriority() : ?int
@@ -252,39 +286,41 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
             self::SCHEMA_PRIORITY
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
-        return (int) $this->data[self::SCHEMA_REQUEST][self::SCHEMA_PRIORITY];
+        return (int) $this->config[self::SCHEMA_REQUEST][self::SCHEMA_PRIORITY];
     }
 
     private function getResponseActive() : ?bool
     {
         $keys = [
             self::SCHEMA_RESPONSE,
+            self::SCHEMA_SCHEMA,
             self::SCHEMA_ACTIVE
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
-        return (bool) $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_ACTIVE];
+        return (bool) $this->config[self::SCHEMA_RESPONSE][self::SCHEMA_SCHEMA][self::SCHEMA_ACTIVE];
     }
 
     private function getResponsePriority() : ?int
     {
         $keys = [
             self::SCHEMA_RESPONSE,
+            self::SCHEMA_SCHEMA,
             self::SCHEMA_PRIORITY
         ];
 
-        if(false === SchemaParserHelper::routeHasSchema($this->data, $keys)){
+        if(false === SchemaParserHelper::routeHasSchema($this->config, $keys)){
             return null;
         }
 
-        return (int) $this->data[self::SCHEMA_RESPONSE][self::SCHEMA_PRIORITY];
+        return (int) $this->config[self::SCHEMA_RESPONSE][self::SCHEMA_SCHEMA][self::SCHEMA_PRIORITY];
     }
 
     private function getSchema(

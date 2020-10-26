@@ -2,9 +2,9 @@
 
 namespace LDL\Http\Router\Plugin\LDL\Schema\Repository;
 
+use LDL\FS\File\Collection\Validator\ReadableFileValidator;
 use LDL\Type\Collection\AbstractCollection;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
-use LDL\Type\Collection\Validator\File\ReadableFileValidator;
 use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
 
 class SchemaRepository extends AbstractCollection implements HasValidatorChainInterface, SchemaRepositoryInterface

@@ -2,25 +2,31 @@
 
 require __DIR__.'/../vendor/autoload.php';
 
+use LDL\FS\File\Collection\Validator\Exception\FileValidatorException;
 use LDL\Http\Core\Request\Request;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\Response;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
-use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Middleware\DispatcherRepository;
+use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepository;
 use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Router;
+use LDL\Http\Router\Middleware\AbstractMiddleware;
 
 use LDL\Http\Router\Plugin\LDL\Schema\Repository\SchemaRepository;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\RouteSchemaConfigParser;
-use LDL\Type\Collection\Validator\File\Exception\FileValidatorException;
 
-class Dispatcher implements RouteDispatcherInterface
+use Symfony\Component\HttpFoundation\ParameterBag;
+
+class Dispatcher extends AbstractMiddleware
 {
-    public function dispatch(
+    public function _dispatch(
         RequestInterface $request,
-        ResponseInterface $response
+        ResponseInterface $response,
+        Router $router,
+        ParameterBag $urlParams = null
     ): ?array
     {
         //return json_decode($request->getContent(), true);
@@ -37,6 +43,7 @@ $schemaRepo = new SchemaRepository();
 try{
     $schemaRepo->append(__DIR__.'/schema/header-schema.json', 'header-parameters.schema');
     $schemaRepo->append(__DIR__.'/schema/response-content-schema.json', 'response-content-parameters.schema');
+    $schemaRepo->append(__DIR__.'/schema/response-content-error-schema.json', 'response-content-parameters-error.schema');
     $schemaRepo->append(__DIR__.'/schema/response-header-schema.json', 'response-header-parameters.schema');
     $schemaRepo->append(__DIR__.'/schema/parameter-schema.json', 'request-parameters.schema');
     $schemaRepo->append(__DIR__.'/schema/url-parameters-schema.json', 'url-parameters.schema');
@@ -45,28 +52,35 @@ try{
 
 }
 
-$parserCollection = new RouteConfigParserCollection();
-$parserCollection->append(new RouteSchemaConfigParser($schemaRepo));
+$configParserRepository = new RouteConfigParserRepository();
+$configParserRepository->append(new RouteSchemaConfigParser($schemaRepo));
 
 $response = new Response();
 
 $router = new Router(
     Request::createFromGlobals(),
-    $response
+    $response,
+    $configParserRepository,
+    null,
+    new ResponseParserRepository()
 );
+
+$dispatcherRepository = new DispatcherRepository();
+$dispatcherRepository->append(new Dispatcher('dispatcher'))
+->append(new \LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PreDispatch())
+->append(new \LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PostDispatch());
 
 try{
     $routes = RouteFactory::fromJsonFile(
         __DIR__.'/routes.json',
         $router,
-        null,
-        $parserCollection
+        $dispatcherRepository
     );
 }catch(\Exception $e){
     return $e->getMessage();
 }
 
-$group = new RouteGroup('student', 'student', $routes);
+$group = new RouteGroup('Test group', 'test', $routes);
 
 $router->addGroup($group);
 

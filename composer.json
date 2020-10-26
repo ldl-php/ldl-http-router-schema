@@ -12,6 +12,8 @@
         "ext-json": "*"
     },
     "license": "MIT",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "authors": [
         {
             "name": "Federico Stange",

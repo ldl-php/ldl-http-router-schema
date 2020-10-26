@@ -1,0 +1,11 @@
+{
+  "description": "Content Description",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string",
+      "minLength": 5
+    }
+  },
+  "required": ["error"]
+}
