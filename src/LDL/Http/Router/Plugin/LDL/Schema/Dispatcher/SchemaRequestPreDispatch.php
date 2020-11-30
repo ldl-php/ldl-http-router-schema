@@ -11,9 +11,9 @@ use LDL\Http\Router\Plugin\LDL\Schema\Validator\RequestResponseSchemaValidator;
 use LDL\Http\Router\Router;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-class PreDispatch extends AbstractMiddleware
+class SchemaRequestPreDispatch extends AbstractMiddleware
 {
-    private const NAME = 'ldl.schema.validator.predispatch';
+    private const NAME = 'ldl.schema.validator.request';
     private const DEFAULT_IS_ACTIVE = true;
     private const DEFAULT_PRIORITY = 1;
 

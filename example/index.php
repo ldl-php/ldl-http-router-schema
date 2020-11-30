@@ -14,6 +14,8 @@ use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Router;
 use LDL\Http\Router\Middleware\AbstractMiddleware;
+use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\SchemaRequestPreDispatch;
+use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\SchemaResponsePostDispatch;
 
 use LDL\Http\Router\Plugin\LDL\Schema\Repository\SchemaRepository;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\RouteSchemaConfigParser;
@@ -67,8 +69,8 @@ $router = new Router(
 
 $dispatcherRepository = new DispatcherRepository();
 $dispatcherRepository->append(new Dispatcher('dispatcher'))
-->append(new \LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PreDispatch())
-->append(new \LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PostDispatch());
+->append(new SchemaRequestPreDispatch())
+->append(new SchemaResponsePostDispatch());
 
 try{
     $routes = RouteFactory::fromJsonFile(

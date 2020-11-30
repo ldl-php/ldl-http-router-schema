@@ -4,8 +4,8 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Config;
 
 use LDL\Http\Router\Plugin\LDL\Schema\Config\Exception\Handler\InvalidRequestSchemaExceptionHandler;
 use LDL\Http\Router\Plugin\LDL\Schema\Config\Exception\Handler\InvalidResponseSchemaExceptionHandler;
-use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PostDispatch;
-use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\PreDispatch;
+use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\SchemaResponsePostDispatch;
+use LDL\Http\Router\Plugin\LDL\Schema\Dispatcher\SchemaRequestPreDispatch;
 use LDL\Http\Router\Plugin\LDL\Schema\Helper\SchemaParserHelper;
 use LDL\Http\Router\Route\Config\Helper\ResponseCodeHelper;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
@@ -43,78 +43,143 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
      */
     private $schemaRepo;
 
-    public function __construct(
-        SchemaRepositoryInterface $schemaRepo
-    )
+    public function __construct(SchemaRepositoryInterface $schemaRepo)
     {
         $this->schemaRepo = $schemaRepo;
     }
 
-    public function parse(
-        RouteInterface $route
-    ): void
+    public function parse(RouteInterface $route): void
     {
-        $routePreDispatchers = $route->getPreDispatchChain()->filterByClass(PreDispatch::class);
-        $routePostDispatchers = $route->getPostDispatchChain()->filterByClass(PostDispatch::class);
-
-        $hasPreDispatchers = count($routePreDispatchers) > 0;
-        $hasPostDispatchers = count($routePostDispatchers) > 0;
-
+        /**
+         * Detect if there's a schema config in place in the route, if there isn't any, this plugin must not be used
+         */
         $this->config = $route->getConfig()->getRawConfig();
 
-        $route->getExceptionHandlers()->append(new InvalidRequestSchemaExceptionHandler())
-            ->append(new InvalidResponseSchemaExceptionHandler());
+        $requestSchema = [
+            'parameters' => $this->getParameters(),
+            'urlParameters' => $this->getUrlParameters(),
+            'headers' => $this->getHeadersSchema(),
+            'body' => $this->getBodySchema()
+        ];
 
-        $routeSchemaConfig = new RouteSchemaConfig(
-            $this->getParameters(),
-            $this->getUrlParameters(),
-            $this->getHeadersSchema(),
-            $this->getBodySchema()
-        );
+        $responseSchema = [
+            'headers' => $this->getResponseHeaderSchema(),
+            'content' => $this->getResponseContentSchema()
+        ];
 
-        if(false === $hasPreDispatchers){
-            $preDispatch = new PreDispatch();
+        $hasRequestSchema = false;
+        $hasResponseSchema = false;
+
+        foreach($requestSchema as $part){
+            if(null !== $part){
+                $hasRequestSchema = true;
+                break;
+            }
+        }
+
+        foreach($responseSchema as $part){
+            if(null !== $part){
+                $hasResponseSchema = true;
+                break;
+            }
+        }
+
+        /**
+         * No schema configuration was detected, return and exit
+         */
+        if(false === $hasRequestSchema && false === $hasResponseSchema){
+            return;
+        }
+
+        $schemaPreDispatchers = $route->getPreDispatchChain()->filterByClassRecursive(SchemaRequestPreDispatch::class);
+        $schemaPostDispatchers = $route->getPostDispatchChain()->filterByClassRecursive(SchemaResponsePostDispatch::class);
+
+        $schemaPreDispatchCount = count($schemaPreDispatchers);
+        $schemaPostDispatchCount = count($schemaPostDispatchers);
+
+        if($schemaPreDispatchCount > 1){
+            $msg = sprintf(
+                'There can only be ONE schema pre dispatcher, "%s" were found',
+                $schemaPreDispatchCount
+            );
+
+            throw new \LogicException($msg);
+        }
+
+        if($schemaPostDispatchCount > 1){
+            $msg = sprintf(
+                'There can only be ONE schema post dispatcher, "%s" were found',
+                $schemaPreDispatchCount
+            );
+
+            throw new \LogicException($msg);
+        }
+
+        $preDispatch = $schemaPreDispatchers->getFirst();
+        $postDispatch = $schemaPostDispatchers->getFirst();
+
+        if($hasRequestSchema){
+            if(0 === $schemaPreDispatchCount) {
+                $preDispatch = new SchemaRequestPreDispatch();
+
+                $route->getPreDispatchChain()
+                    ->append($preDispatch);
+            }
+
+            if(
+                0 === count($route->getExceptionHandlers()->filterByClass(InvalidRequestSchemaExceptionHandler::class)) &&
+                0 === count($route->getRouter()->getExceptionHandlers()->filterByClass(InvalidRequestSchemaExceptionHandler::class))
+            ){
+                $route->getExceptionHandlers()
+                    ->append(new InvalidResponseSchemaExceptionHandler());
+            }
+
+            /**
+             * @var SchemaRequestPreDispatch $preDispatch
+             */
             $preDispatch->init(
-                $routeSchemaConfig,
+                new RouteSchemaConfig(
+                    $requestSchema['parameters'],
+                    $requestSchema['urlParameters'],
+                    $requestSchema['headers'],
+                    $requestSchema['body']
+                ),
                 $this->getRequestActive(),
                 $this->getRequestPriority()
             );
 
-            $route->getRouter()->getPreDispatchChain()->append($preDispatch);
         }
 
-        if((false === $hasPostDispatchers) && (bool) $this->getResponseActive()) {
-            $postDispatch = new PostDispatch();
+        if($hasResponseSchema){
+            /**
+             * No schema post dispatchers were found, auto append required classes
+             */
+            if(0 === $schemaPostDispatchCount) {
+                $postDispatch = new SchemaResponsePostDispatch();
+
+                $route->getPostDispatchChain()
+                    ->append($postDispatch);
+
+            }
+
+            if(
+                0 === count($route->getExceptionHandlers()->filterByClass(InvalidResponseSchemaExceptionHandler::class)) &&
+                0 === count($route->getRouter()->getExceptionHandlers()->filterByClass(InvalidResponseSchemaExceptionHandler::class))
+            ){
+                $route->getExceptionHandlers()
+                    ->append(new InvalidResponseSchemaExceptionHandler());
+            }
+            /**
+             * @var SchemaResponsePostDispatch $postDispatch
+             */
             $postDispatch->init(
                 $this->getResponsePriority(),
-                $this->getResponseHeaderSchema(),
-                $this->getResponseContentSchema()
+                $responseSchema['headers'],
+                $responseSchema['content']
             );
 
-            $route->getRouter()->getPostDispatchChain()->append($postDispatch);
         }
 
-        /**
-         * @var PreDispatch $preDispatch
-         */
-        foreach($routePreDispatchers as $preDispatch){
-            $preDispatch->init(
-                $routeSchemaConfig,
-                $this->getRequestActive(),
-                $this->getRequestPriority()
-            );
-        }
-
-        /**
-         * @var PostDispatch $postDispatch
-         */
-        foreach($routePostDispatchers as $postDispatch){
-            $postDispatch->init(
-                $this->getResponsePriority(),
-                $this->getResponseHeaderSchema(),
-                $this->getResponseContentSchema()
-            );
-        }
     }
 
     private function getHeadersSchema() : ?SchemaContract
@@ -150,7 +215,7 @@ class RouteSchemaConfigParser implements RouteConfigParserInterface
         return $this->getSchema(
             $this->config[self::SCHEMA_URL][self::SCHEMA_PARAMETERS][self::SCHEMA_SCHEMA],
             self::SCHEMA_PARAMETERS,
-        );
+            );
     }
 
     private function getParameters() : ?SchemaContract

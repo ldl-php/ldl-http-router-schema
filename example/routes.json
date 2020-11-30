@@ -16,7 +16,7 @@
         "preDispatch": {
           "name": "main pre dispatchers",
           "list": [
-            "ldl.schema.validator.predispatch"
+            "ldl.schema.validator.request"
           ]
         },
         "dispatchers": {
@@ -28,7 +28,7 @@
         "postDispatch": {
           "name": "main post dispatchers",
           "list": [
-            "ldl.schema.validator.postdispatch"
+            "ldl.schema.validator.response"
           ]
         }
       },

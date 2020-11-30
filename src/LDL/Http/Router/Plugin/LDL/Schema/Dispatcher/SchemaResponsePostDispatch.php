@@ -12,9 +12,9 @@ use Swaggest\JsonSchema\Context;
 use Swaggest\JsonSchema\SchemaContract;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-class PostDispatch extends AbstractMiddleware
+class SchemaResponsePostDispatch extends AbstractMiddleware
 {
-    private const NAME = 'ldl.schema.validator.postdispatch';
+    private const NAME = 'ldl.schema.validator.response';
     private const DEFAULT_IS_ACTIVE = true;
     private const DEFAULT_PRIORITY = 9999;
 
