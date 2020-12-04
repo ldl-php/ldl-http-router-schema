@@ -4,18 +4,33 @@ namespace LDL\Http\Router\Plugin\LDL\Schema\Repository;
 
 use LDL\FS\File\Collection\Validator\ReadableFileValidator;
 use LDL\Type\Collection\AbstractCollection;
+use LDL\Type\Collection\Interfaces;
+use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
-use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
+use LDL\Type\Collection\Validator\UniqueKeyValidator;
 
-class SchemaRepository extends AbstractCollection implements HasValidatorChainInterface, SchemaRepositoryInterface
+class SchemaRepository extends AbstractCollection implements SchemaRepositoryInterface
 {
     use ValueValidatorChainTrait;
+    use KeyValidatorChainTrait;
 
     public function __construct(iterable $items = null)
     {
         parent::__construct($items);
+
         $this->getValidatorChain()
-            ->append(new ReadableFileValidator());
+            ->append(new ReadableFileValidator())
+            ->lock();
+
+        $this->getKeyValidatorChain()
+            ->append(new UniqueKeyValidator())
+            ->lock();
+    }
+
+    public function append($item, $key = null): Interfaces\CollectionInterface
+    {
+        $key = $key ?? basename($item);
+        return parent::append($item, $key);
     }
 
     public function getSchema(string $name) : array

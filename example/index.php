@@ -43,12 +43,12 @@ class Dispatcher extends AbstractMiddleware
 $schemaRepo = new SchemaRepository();
 
 try{
-    $schemaRepo->append(__DIR__.'/schema/header-schema.json', 'header-parameters.schema');
-    $schemaRepo->append(__DIR__.'/schema/response-content-schema.json', 'response-content-parameters.schema');
-    $schemaRepo->append(__DIR__.'/schema/response-content-error-schema.json', 'response-content-parameters-error.schema');
-    $schemaRepo->append(__DIR__.'/schema/response-header-schema.json', 'response-header-parameters.schema');
-    $schemaRepo->append(__DIR__.'/schema/parameter-schema.json', 'request-parameters.schema');
-    $schemaRepo->append(__DIR__.'/schema/url-parameters-schema.json', 'url-parameters.schema');
+    $schemaRepo->append(__DIR__.'/schema/header-schema.json')
+    ->append(__DIR__.'/schema/response-content-schema.json')
+    ->append(__DIR__.'/schema/response-content-error-schema.json')
+    ->append(__DIR__.'/schema/response-header-schema.json')
+    ->append(__DIR__.'/schema/parameter-schema.json')
+    ->append(__DIR__.'/schema/url-parameters-schema.json');
     //$schemaRepo->append(__DIR__.'/schema/body-schema.json', 'request-body.schema');
 }catch(FileValidatorException $e){
 
